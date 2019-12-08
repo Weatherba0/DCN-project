@@ -95,7 +95,23 @@ while True:
             # Also save username and username header
             clients[client_socket] = user
 
-            print('Accepted new connection from {}:{}, username: {}'.format(*client_address, user['data'].decode('utf-8')))
+            username = user['data'].decode('utf-8')
+
+            print('Accepted new connection from {}:{}, username: {}'.format(*client_address, username))
+
+            # Broadcast new user
+            # Iterate over connected clients and broadcast message
+            for client_socket in clients:
+                # Send user and message (both with their headers)
+                # We are reusing here message header sent by sender, and saved username header send by user when he connected
+                message = f'Welcome new user {username}'
+                message = message.encode('utf-8')
+                message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+                user = "System Message"
+                user = user.encode('utf-8')
+                user_header = f"{len(user):<{HEADER_LENGTH}}".encode('utf-8')
+                client_socket.send(user_header + user + message_header + message)
+
 
         # Else existing socket is sending a message
         else:
@@ -106,6 +122,21 @@ while True:
             # If False, client disconnected, cleanup
             if message is False:
                 print('Closed connection from: {}'.format(clients[notified_socket]['data'].decode('utf-8')))
+
+                # Broadcast new user
+                # Iterate over connected clients and broadcast message
+                for client_socket in clients:
+                    # But don't sent it to new user
+                    if client_socket != notified_socket:
+                        # Send user and message (both with their headers)
+                        # We are reusing here message header sent by sender, and saved username header send by user when he connected
+                        message = f'{clients[notified_socket]["data"].decode("utf-8")} has left the chat'
+                        message = message.encode('utf-8')
+                        message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+                        user = "System Message"
+                        user = user.encode('utf-8')
+                        user_header = f"{len(user):<{HEADER_LENGTH}}".encode('utf-8')
+                        client_socket.send(user_header + user + message_header + message)
 
                 # Remove from list for socket.socket()
                 sockets_list.remove(notified_socket)
